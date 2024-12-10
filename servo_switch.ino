@@ -21,7 +21,7 @@ struct Alarm {
   char repeat[10];
   bool action;           // 最終狀態（true: Turn On, false: Turn Off）
   bool isBlink;          // 是否執行 Blink
-  uint16_t blinkDuration; // Blink 持續時間（毫秒）
+  uint32_t blinkDuration; // Blink 持續時間（毫秒）
 };
 
 std::vector<Alarm> alarms;
@@ -31,16 +31,16 @@ volatile bool stopBlink = false;
 bool blinkActive = false;
 unsigned long blinkStartTime = 0;
 unsigned long lastBlinkTime = 0;
-uint16_t blinkInterval = 500;
+uint32_t blinkInterval = 500;
 bool blinkState = false;
 bool blinkFinalState = false;
-uint16_t blinkDuration = 0;
+uint32_t blinkDuration = 0;
 
 // 函數聲明
 void standby();
 void turnOn();
 void turnOff();
-void blink(uint16_t duration, uint16_t interval, bool finalState);
+void blink(uint32_t duration, uint32_t interval, bool finalState);
 void saveAlarms();
 void loadAlarms();
 void checkAlarms();
@@ -309,7 +309,7 @@ void turnOff() {
   standby();
 }
 
-void startBlink(uint16_t duration, uint16_t interval, bool finalState) {
+void startBlink(uint32_t duration, uint32_t interval, bool finalState) {
   Serial.printf("[INFO] Starting blink: duration=%dms, interval=%dms, finalState=%s\n",
                 duration, interval, finalState ? "ON" : "OFF");
   stopBlink = false;
@@ -367,7 +367,9 @@ void saveAlarms() {
     }
     EEPROM.write(addr++, alarm.action);
     EEPROM.write(addr++, alarm.isBlink);
-    EEPROM.write(addr++, alarm.blinkDuration >> 8);
+    EEPROM.write(addr++, (alarm.blinkDuration >> 24) & 0xFF);
+    EEPROM.write(addr++, (alarm.blinkDuration >> 16) & 0xFF);
+    EEPROM.write(addr++, (alarm.blinkDuration >> 8) & 0xFF);
     EEPROM.write(addr++, alarm.blinkDuration & 0xFF);
   }
 
@@ -399,7 +401,10 @@ void loadAlarms() {
     }
     alarm.action = EEPROM.read(addr++);
     alarm.isBlink = EEPROM.read(addr++);
-    alarm.blinkDuration = (EEPROM.read(addr++) << 8) | EEPROM.read(addr++);
+    alarm.blinkDuration = (EEPROM.read(addr++) << 24) | 
+                      (EEPROM.read(addr++) << 16) | 
+                      (EEPROM.read(addr++) << 8) | 
+                      EEPROM.read(addr++);
     alarms.push_back(alarm);
   }
   Serial.println("[INFO] Alarms loaded successfully");
@@ -488,10 +493,10 @@ void handleBlink() {
     return;
   }
 
-  uint16_t duration = server.arg("duration").toInt();
+  uint32_t duration = server.arg("duration").toInt();
   bool finalState = (server.arg("finalState") == "true");
 
-  startBlink(duration, 500, finalState);
+  startBlink(duration, 3000, finalState);
   server.send(200, "text/plain", "Blink started");
 }
 
@@ -515,7 +520,7 @@ void checkAlarms() {
 
     if (shouldTrigger) {
       if (alarm.isBlink) {
-        startBlink(alarm.blinkDuration, 500, alarm.action);
+        startBlink(alarm.blinkDuration, 3000, alarm.action);
       } else {
         if (alarm.action) {
           turnOn();
