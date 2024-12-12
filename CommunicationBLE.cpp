@@ -1,11 +1,10 @@
+#ifdef ESP32
+
 #include "Communication.h"
-#ifdef ESP8266
-void Communication::initializeBLE() {}
-#elif defined(ESP32)
 #include "Hardware.h"
 #include "AlarmManager.h"
 #include "BlinkManager.h"
-#include <ArduinoJson.h>
+#include "QRCodeOLED.h"
 #include <BLEDevice.h>
 #include <BLEServer.h>
 #include <BLEUtils.h>
@@ -42,7 +41,7 @@ void processCommand(const String& command) {
         int delimiter = command.indexOf(':');
         if (delimiter != -1) {
             uint32_t duration = command.substring(delimiter + 1).toInt();
-            BlinkManager::startBlink(duration, 500, true);
+            BlinkManager::startBlink(duration, 3000, true);
             sendResponse("Blink started");
         } else {
             sendResponse("Invalid BLINK command format");
@@ -50,6 +49,13 @@ void processCommand(const String& command) {
     } else if (command == "STOP_BLINK") {
         BlinkManager::stopBlink();
         sendResponse("Blink stopped");
+    } else if (command == "CORRECTION") {
+        Hardware::correction();
+        sendResponse("Device correcting");
+    } else if (command == "GET_ALARMS") {
+        // 使用 JSON 傳遞鬧鐘列表
+        String response = AlarmManager::getAlarmsJSON();
+        sendResponse(response);
     } else if (command.startsWith("ADD_ALARM:")) {
         // 格式: ADD_ALARM:<hour>:<minute>:<repeat>:<action>:<isBlink>:<blinkDuration>
         String tokens[7];
@@ -74,22 +80,22 @@ void processCommand(const String& command) {
         } else {
             sendResponse("Invalid ADD_ALARM format");
         }
-    } else if (command == "GET_ALARMS") {
-        // 使用 JSON 傳遞鬧鐘列表
-        StaticJsonDocument<512> doc;
-        for (const auto& alarm : AlarmManager::getAlarms()) {
-            JsonObject obj = doc.createNestedObject();
-            obj["hour"] = alarm.hour;
-            obj["minute"] = alarm.minute;
-            obj["repeat"] = alarm.repeat;
-            obj["action"] = alarm.action;
-            obj["isBlink"] = alarm.isBlink;
-            obj["blinkDuration"] = alarm.blinkDuration;
+    } else if (command.startsWith("DELETE_ALARM:")) {
+        // 格式: DELETE_ALARM:<index>
+        int delimiter = command.indexOf(':');
+        if (delimiter != -1) {
+            int index = command.substring(delimiter + 1).toInt();
+            if (AlarmManager::deleteAlarm(index)) {
+                sendResponse("Alarm deleted successfully");
+            } else {
+                sendResponse("Failed to delete alarm: invalid index");
+            }
+        } else {
+            sendResponse("Invalid DELETE_ALARM command format");
         }
-
-        String response;
-        serializeJson(doc, response);
-        sendResponse(response);
+    } else if (command == "CLEAR_ALARMS") {
+        AlarmManager::clearAlarms();
+        sendResponse("All alarms cleared successfully");
     } else {
         sendResponse("Unknown command");
     }
@@ -121,7 +127,7 @@ class CommandCallbacks : public BLECharacteristicCallbacks {
 // 初始化 BLE
 void Communication::initializeBLE() {
     Serial.println("[INFO] Initializing BLE...");
-    BLEDevice::init("ESP32_Alarm");
+    BLEDevice::init("Servo Switch");
 
     BLEServer* server = BLEDevice::createServer();
     server->setCallbacks(new ServerCallbacks());
@@ -150,5 +156,7 @@ void Communication::initializeBLE() {
     advertising->start();
 
     Serial.println("[INFO] BLE initialized and advertising started");
+
+    // QRCodeOLED::show("https://timcsy.github.io/ServoSwitch/", "Device: Servo Switch");
 }
 #endif

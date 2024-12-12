@@ -5,24 +5,35 @@
 #include <time.h>
 #include <ArduinoJson.h>
 
-#ifdef ESP8266
-#include <ESP8266WebServer.h>
-extern ESP8266WebServer server;
-#elif defined(ESP32)
-#include <WebServer.h>
-extern WebServer server;
-#endif
-
 // 鬧鐘列表
 std::vector<Alarm> alarms;
 
 void AlarmManager::addAlarm(const Alarm& alarm) {
     alarms.push_back(alarm);
     saveAlarms(); // 每次添加新鬧鐘後保存
+    Serial.println("[INFO] Alarm added successfully");
 }
 
 std::vector<Alarm> AlarmManager::getAlarms() {
     return alarms; // 返回所有鬧鐘
+}
+
+String AlarmManager::getAlarmsJSON() {
+    StaticJsonDocument<1024> doc;
+    for (const auto& alarm : alarms) {
+        JsonObject obj = doc.createNestedObject();
+        obj["hour"] = alarm.hour;
+        obj["minute"] = alarm.minute;
+        obj["repeat"] = alarm.repeat;
+        obj["action"] = alarm.action;
+        obj["isBlink"] = alarm.isBlink;
+        obj["blinkDuration"] = alarm.blinkDuration;
+    }
+
+    String json;
+    serializeJson(doc, json);
+    Serial.println("[INFO] Convert alarms to JSON");
+    return json;
 }
 
 void AlarmManager::loadAlarms() {
@@ -33,6 +44,22 @@ void AlarmManager::loadAlarms() {
 void AlarmManager::saveAlarms() {
     Serial.println("[INFO] Saving alarms to EEPROM");
     EEPROMStorage::saveAlarms(alarms);
+}
+
+bool AlarmManager::deleteAlarm(size_t index) {
+    if (index < alarms.size()) {
+        alarms.erase(alarms.begin() + index);
+        saveAlarms(); // 保存變更
+        Serial.printf("[INFO] Alarm [%d] deleted successfully\n", index);
+        return true;
+    }
+    return false;
+}
+
+void AlarmManager::clearAlarms() {
+    alarms.clear();
+    saveAlarms(); // 保存變更
+    Serial.println("[INFO] All alarms cleared successfully");
 }
 
 void AlarmManager::checkAlarms() {
@@ -63,67 +90,4 @@ void AlarmManager::checkAlarms() {
             }
         }
     }
-}
-
-void AlarmManager::handleGetAlarms() {
-    StaticJsonDocument<1024> doc;
-    for (const auto& alarm : alarms) {
-        JsonObject obj = doc.createNestedObject();
-        obj["hour"] = alarm.hour;
-        obj["minute"] = alarm.minute;
-        obj["repeat"] = alarm.repeat;
-        obj["action"] = alarm.action;
-        obj["isBlink"] = alarm.isBlink;
-        obj["blinkDuration"] = alarm.blinkDuration;
-    }
-
-    String json;
-    serializeJson(doc, json);
-    Serial.println("[INFO] Sending alarms as JSON");
-    server.send(200, "application/json", json);
-}
-
-void AlarmManager::handleAddAlarm() {
-    if (!server.hasArg("hour") || !server.hasArg("minute") || !server.hasArg("repeat") || !server.hasArg("action")) {
-        server.send(400, "text/plain", "Missing required fields");
-        return;
-    }
-
-    Alarm alarm;
-    alarm.hour = server.arg("hour").toInt();
-    alarm.minute = server.arg("minute").toInt();
-    strncpy(alarm.repeat, server.arg("repeat").c_str(), sizeof(alarm.repeat) - 1);
-    alarm.action = (server.arg("action") == "true");
-    alarm.isBlink = (server.hasArg("isBlink") && server.arg("isBlink") == "true");
-    alarm.blinkDuration = alarm.isBlink ? server.arg("blinkDuration").toInt() : 0;
-
-    alarms.push_back(alarm);
-    saveAlarms();
-    server.send(200, "text/plain", "Alarm added");
-    Serial.println("[INFO] Alarm added successfully");
-}
-
-void AlarmManager::handleDeleteAlarm() {
-    if (!server.hasArg("index")) {
-        server.send(400, "text/plain", "Missing index parameter");
-        return;
-    }
-
-    uint8_t index = server.arg("index").toInt();
-    if (index >= alarms.size()) {
-        server.send(400, "text/plain", "Invalid index");
-        return;
-    }
-
-    alarms.erase(alarms.begin() + index);
-    saveAlarms();
-    server.send(200, "text/plain", "Alarm deleted");
-    Serial.println("[INFO] Alarm deleted successfully");
-}
-
-void AlarmManager::handleClearAlarms() {
-    alarms.clear();
-    saveAlarms();
-    server.send(200, "text/plain", "All alarms cleared");
-    Serial.println("[INFO] All alarms cleared successfully");
 }

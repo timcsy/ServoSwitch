@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Alarm Settings via Bluetooth</title>
+  <title>Servo Switch via Bluetooth</title>
   <link href="https://cdn.jsdelivr.net/npm/vuetify@2.6.4/dist/vuetify.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14"></script>
   <script src="https://cdn.jsdelivr.net/npm/vuetify@2.6.4"></script>
@@ -24,6 +24,15 @@
         <v-card class="mb-5">
           <v-card-title>Immediate Control</v-card-title>
           <v-card-text>
+            <v-row justify="left" class="mb-2">
+              <v-col cols="auto">
+                <v-btn color="green" @click="turnOn">Turn On</v-btn>
+              </v-col>
+              <v-col cols="auto">
+                <v-btn color="red" @click="turnOff">Turn Off</v-btn>
+              </v-col>
+            </v-row>
+
             <v-row>
               <v-col cols="6">
                 <v-text-field
@@ -40,13 +49,22 @@
                 ></v-select>
               </v-col>
             </v-row>
+
+            <v-row justify="left" class="mb-2">
+              <v-col cols="auto">
+                <v-btn color="orange" @click="triggerBlink">Blink</v-btn>
+              </v-col>
+              <v-col cols="auto">
+                <v-btn color="blue" @click="stopBlink">Stop</v-btn>
+              </v-col>
+            </v-row>
+
+            <v-row justify="left">
+              <v-col cols="auto">
+                <v-btn color="purple" @click="correctServo">Calibrate</v-btn>
+              </v-col>
+            </v-row>
           </v-card-text>
-          <v-card-actions>
-            <v-btn color="green" @click="turnOn">Turn On</v-btn>
-            <v-btn color="red" @click="turnOff">Turn Off</v-btn>
-            <v-btn color="orange" @click="triggerBlink">Blink</v-btn>
-            <v-btn color="blue" @click="stopBlink">Stop</v-btn>
-          </v-card-actions>
         </v-card>
 
         <!-- Add New Alarm -->
@@ -101,15 +119,21 @@
                   <v-list-item-title>
                     {{ formatTime(alarm.hour, alarm.minute) }} - {{ formatAction(alarm) }}
                   </v-list-item-title>
+                  <v-list-item-subtitle v-if="!alarm.isBlink">
+                    Repeat: {{ formatRepeat(alarm.repeat) }}
+                  </v-list-item-subtitle>
                   <v-list-item-subtitle v-if="alarm.isBlink">
-                    Blink Duration: {{ alarm.blinkDuration }} ms, Final State: {{ alarm.action ? 'On' : 'Off' }}
+                    Repeat: {{ formatRepeat(alarm.repeat) }}<br>Blink Duration: {{ alarm.blinkDuration }} ms<br>Final State: {{ alarm.action ? 'On' : 'Off' }}
                   </v-list-item-subtitle>
                 </v-list-item-content>
+                <v-list-item-action>
+                  <v-btn color="red" @click="deleteAlarm(index)">Delete</v-btn>
+                </v-list-item-action>
               </v-list-item>
             </v-list>
           </v-card-text>
           <v-card-actions>
-            <v-btn color="purple" @click="getAlarms">Refresh Alarm List</v-btn>
+            <v-btn color="blue" @click="clearAlarms">Clear All Alarms</v-btn>
           </v-card-actions>
         </v-card>
       </v-container>
@@ -130,10 +154,10 @@
           repeat: 'once',
           action: 'on',
           isBlink: false,
-          blinkDuration: 1000,
+          blinkDuration: 10000,
           finalState: true,
         },
-        immediateBlinkDuration: 1000,
+        immediateBlinkDuration: 10000,
         immediateBlinkFinalState: true,
         repeatOptions: [
           { value: 'once', text: 'Once' },
@@ -187,13 +211,25 @@
         async stopBlink() {
           await this.sendCommand("STOP_BLINK");
         },
+        async correctServo() {
+          await this.sendCommand("CORRECTION");
+        },
         async addAlarm() {
           const [hour, minute] = this.newAlarmTime.split(':').map(Number);
           const command = `ADD_ALARM:${hour}:${minute}:${this.newAlarm.repeat}:${this.newAlarm.action}:${this.newAlarm.isBlink}:${this.newAlarm.blinkDuration}`;
           await this.sendCommand(command);
         },
-        async getAlarms() {
+        async loadAlarms() {
           await this.sendCommand("GET_ALARMS");
+        },
+        async deleteAlarm(index) {
+          const command = `DELETE_ALARM:${index}`;
+          await this.sendBluetoothCommand(command);
+          this.loadAlarms();
+        },
+        async clearAlarms() {
+          await this.sendBluetoothCommand('CLEAR_ALARMS');
+          this.loadAlarms();
         },
         async sendCommand(command) {
           if (!this.commandCharacteristic) {
@@ -229,6 +265,9 @@
         },
         formatAction(alarm) {
           return alarm.isBlink ? 'Blink' : alarm.action ? 'Turn On' : 'Turn Off';
+        },
+        formatRepeat(repeat) {
+          return repeat.charAt(0).toUpperCase() + repeat.slice(1);
         },
         updateBlinkFields() {
           if (this.newAlarm.action === 'blink') {

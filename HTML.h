@@ -4,7 +4,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Alarm Settings</title>
+  <title>Servo Switch</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://cdn.jsdelivr.net/npm/vuetify@2.6.4/dist/vuetify.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14"></script>
@@ -18,6 +18,14 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
         <v-card class="mb-5">
           <v-card-title>Immediate Control</v-card-title>
           <v-card-text>
+            <v-row justify="left" class="mb-2">
+              <v-col cols="auto">
+                <v-btn color="green" @click="turnOn">Turn On</v-btn>
+              </v-col>
+              <v-col cols="auto">
+                <v-btn color="red" @click="turnOff">Turn Off</v-btn>
+              </v-col>
+            </v-row>
             <v-row>
               <v-col cols="6">
                 <v-text-field
@@ -34,13 +42,20 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
                 ></v-select>
               </v-col>
             </v-row>
+            <v-row justify="left" class="mb-2">
+              <v-col cols="auto">
+                <v-btn color="orange" @click="triggerBlink">Blink</v-btn>
+              </v-col>
+              <v-col cols="auto">
+                <v-btn color="blue" @click="stopBlink">Stop</v-btn>
+              </v-col>
+            </v-row>
+            <v-row justify="left">
+              <v-col cols="auto">
+                <v-btn color="purple" @click="correctServo">Calibrate</v-btn>
+              </v-col>
+            </v-row>
           </v-card-text>
-          <v-card-actions>
-            <v-btn color="green" @click="turnOn">Turn On</v-btn>
-            <v-btn color="red" @click="turnOff">Turn Off</v-btn>
-            <v-btn color="orange" @click="triggerBlink">Blink</v-btn>
-            <v-btn color="blue" @click="triggerStop">Stop</v-btn>
-          </v-card-actions>
         </v-card>
         <!-- Add New Alarm -->
         <v-card class="mb-5">
@@ -95,8 +110,11 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
                   <v-list-item-title>
                     {{ formatTime(alarm.hour, alarm.minute) }} - {{ formatAction(alarm) }}
                   </v-list-item-title>
+                  <v-list-item-subtitle v-if="!alarm.isBlink">
+                    Repeat: {{ formatRepeat(alarm.repeat) }}
+                  </v-list-item-subtitle>
                   <v-list-item-subtitle v-if="alarm.isBlink">
-                    Blink Duration: {{ alarm.blinkDuration }} ms, Final State: {{ alarm.action ? 'On' : 'Off' }}
+                    Repeat: {{ formatRepeat(alarm.repeat) }}<br>Blink Duration: {{ alarm.blinkDuration }} ms<br>Final State: {{ alarm.action ? 'On' : 'Off' }}
                   </v-list-item-subtitle>
                 </v-list-item-content>
                 <v-list-item-action>
@@ -122,11 +140,11 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
           repeat: 'once',
           action: 'on',
           isBlink: false,
-          blinkDuration: 1000,
+          blinkDuration: 10000,
           finalState: true,
         },
         newAlarmTime: '12:00',
-        immediateBlinkDuration: 1000,
+        immediateBlinkDuration: 10000,
         immediateBlinkFinalState: true,
         repeatOptions: [
           { value: 'once', text: 'Once' },
@@ -148,23 +166,24 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
         this.loadAlarms();
       },
       methods: {
-        formatTime(hour, minute) {
-          const period = hour >= 12 ? 'pm' : 'am';
-          const formattedHour = hour % 12 || 12;
-          const formattedMinute = minute.toString().padStart(2, '0');
-          return `${formattedHour}:${formattedMinute} ${period}`;
+        async turnOn() {
+          await fetch('/turn-on', { method: 'POST' });
         },
-        formatAction(alarm) {
-          return alarm.isBlink ? 'Blink' : alarm.action ? 'Turn On' : 'Turn Off';
+        async turnOff() {
+          await fetch('/turn-off', { method: 'POST' });
         },
-        updateBlinkFields() {
-          if (this.newAlarm.action === 'blink') {
-            this.newAlarm.isBlink = true;
-          } else {
-            this.newAlarm.isBlink = false;
-            this.newAlarm.blinkDuration = null;
-            this.newAlarm.finalState = null;
-          }
+        async triggerBlink() {
+          const params = new URLSearchParams({
+            duration: this.immediateBlinkDuration,
+            finalState: this.immediateBlinkFinalState,
+          });
+          await fetch('/blink', { method: 'POST', body: params });
+        },
+        async stopBlink() {
+          await fetch('/stop', { method: 'POST' });
+        },
+        async correctServo() {
+          await fetch('/correction', { method: 'POST' });
         },
         async addAlarm() {
           const [hour, minute] = this.newAlarmTime.split(':').map(Number);
@@ -209,21 +228,26 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
           await fetch('/clear-alarms', { method: 'POST' });
           this.loadAlarms();
         },
-        async turnOn() {
-          await fetch('/turn-on', { method: 'POST' });
+        formatTime(hour, minute) {
+          const period = hour >= 12 ? 'pm' : 'am';
+          const formattedHour = hour % 12 || 12;
+          const formattedMinute = minute.toString().padStart(2, '0');
+          return `${formattedHour}:${formattedMinute} ${period}`;
         },
-        async turnOff() {
-          await fetch('/turn-off', { method: 'POST' });
+        formatAction(alarm) {
+          return alarm.isBlink ? 'Blink' : alarm.action ? 'Turn On' : 'Turn Off';
         },
-        async triggerBlink() {
-          const params = new URLSearchParams({
-            duration: this.immediateBlinkDuration,
-            finalState: this.immediateBlinkFinalState,
-          });
-          await fetch('/blink', { method: 'POST', body: params });
+        formatRepeat(repeat) {
+          return repeat.charAt(0).toUpperCase() + repeat.slice(1);
         },
-        async triggerStop() {
-          await fetch('/stop', { method: 'POST' });
+        updateBlinkFields() {
+          if (this.newAlarm.action === 'blink') {
+            this.newAlarm.isBlink = true;
+          } else {
+            this.newAlarm.isBlink = false;
+            this.newAlarm.blinkDuration = null;
+            this.newAlarm.finalState = null;
+          }
         },
       },
     });
