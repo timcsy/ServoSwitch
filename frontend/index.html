@@ -193,6 +193,7 @@
             await this.responseCharacteristic.startNotifications();
 
             alert("Bluetooth connected successfully!");
+            this.loadAlarms();
           } catch (error) {
             console.error("Bluetooth connection failed:", error);
             alert("Failed to connect Bluetooth.");
@@ -218,11 +219,10 @@
           const [hour, minute] = this.newAlarmTime.split(':').map(Number);
           const command = `ADD_ALARM:${hour}:${minute}:${this.newAlarm.repeat}:${this.newAlarm.action}:${this.newAlarm.isBlink}:${this.newAlarm.blinkDuration}`;
           await this.sendCommand(command);
+          this.loadAlarms();
         },
         async loadAlarms() {
-          const response = await this.sendCommand("GET_ALARMS");
-          const alarms = await response.json();
-          this.alarms = Array.isArray(alarms) ? alarms : [];
+          await this.sendCommand("GET_ALARMS");
         },
         async deleteAlarm(index) {
           const command = `DELETE_ALARM:${index}`;
