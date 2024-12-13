@@ -9,11 +9,13 @@ Servo up, down;
 
 void Hardware::initialize() {
 #ifdef ESP8266
+    // For ESP826: Up = D4, VCC = 3V3, Down = D8, VCC = 3V3
     up.attach(D4, 0, 10000);
     down.attach(D8, 0, 10000);
 #elif defined(ESP32)
-    up.attach(2, 0, 10000);
-    down.attach(15, 0, 10000);
+    // For ESP32: Up = GPIO12, VCC = 5V, Down = GPIO23, VCC = 3V3
+    up.attach(12, 0, 10000);
+    down.attach(23, 0, 10000);
 #endif
     standby();
 }
