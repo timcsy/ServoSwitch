@@ -7,7 +7,7 @@
 #include <ESP8266WebServer.h>     // Local WebServer used to serve the configuration portal
 #include <WiFiManager.h>          // https://github.com/tzapu/WiFiManager WiFi Configuration Magic
 
-#include "QRCodeOLED.h"
+#include "QRCodeLabel.h"
 
 class Network {
 	public:
@@ -36,7 +36,7 @@ class Network {
 		void connect(String ssid = "ESP8266 WiFi Configuration", String password = "", bool reset = false) {
       isConnecting = true;
 
-			QRCodeOLED::show("http://192.168.4.1", "http://192.168.4.1");
+			QRCodeLabel::show("http://192.168.4.1", "http://192.168.4.1");
 
       if (reset) wifiManager->resetSettings();
       if (password == "") wifiManager->autoConnect(ssid.c_str());
@@ -46,7 +46,7 @@ class Network {
 			Serial.println(WiFi.localIP());
       if (WiFi.status() == WL_CONNECTED) {
           String url = String("http://") + WiFi.localIP().toString();
-			    QRCodeOLED::show(url, url);
+			    QRCodeLabel::show(url, url);
       }
 		}
 

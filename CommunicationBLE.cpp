@@ -4,7 +4,7 @@
 #include "Hardware.h"
 #include "AlarmManager.h"
 #include "BlinkManager.h"
-#include "QRCodeOLED.h"
+#include "QRCodeLabel.h"
 #include <BLEDevice.h>
 #include <BLEServer.h>
 #include <BLEUtils.h>
@@ -157,6 +157,6 @@ void Communication::initializeBLE() {
 
     Serial.println("[INFO] BLE initialized and advertising started");
 
-    // QRCodeOLED::show("https://timcsy.github.io/ServoSwitch/", "Device: Servo Switch");
+    // QRCodeLabel::show("https://timcsy.github.io/ServoSwitch/", "Device: Servo Switch");
 }
 #endif

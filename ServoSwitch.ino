@@ -2,19 +2,19 @@
 #include "Communication.h"
 #include "AlarmManager.h"
 #include "BlinkManager.h"
-#include "QRCodeOLED.h"
+#include "QRCodeLabel.h"
 
 void setup() {
     Serial.begin(115200);
 
 #ifdef ESP8266
     // OLED 螢幕設定
-    QRCodeOLED::initialize(0x3c, D2, D1); // SDA = D2, SCL = D1
+    QRCodeLabel::initialize(0x3c, D2, D1); // SDA = D2, SCL = D1
     pinMode(D5, OUTPUT);
     digitalWrite(D5, HIGH);  // VCC = D5
 #elif defined(ESP32)
     // OLED 螢幕設定
-    // QRCodeOLED::initialize(0x3c, 21, 22); // SDA = 21, SCL = 22
+    // QRCodeLabel::initialize(0x3c, 21, 22); // SDA = 21, SCL = 22
 #endif
 
     // 初始化伺服器控制

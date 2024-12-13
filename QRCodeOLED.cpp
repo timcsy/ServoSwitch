@@ -1,6 +1,6 @@
 #ifdef ESP8266
 
-#include "QRCodeOLED.h"
+#include "QRCodeLabel.h"
 #include <qrcodeoled.h>
 #include <SSD1306.h>
 
@@ -11,7 +11,7 @@ String currentQRText = "";
 String currentLabelText = "";
 
 // 初始化 OLED 顯示器
-void QRCodeOLED::initialize(uint8_t i2c_address, uint8_t sda_pin, uint8_t scl_pin) {
+void QRCodeLabel::initialize(uint8_t i2c_address, uint8_t sda_pin, uint8_t scl_pin) {
 		display = new SSD1306(i2c_address, sda_pin, scl_pin);  // 設定 I2C 位址和引腳
     qrcode = new QRcodeOled(display);
 
@@ -26,7 +26,7 @@ void QRCodeOLED::initialize(uint8_t i2c_address, uint8_t sda_pin, uint8_t scl_pi
 }
 
 // 顯示 QR Code 和底部文本（僅在內容變化時刷新）
-void QRCodeOLED::show(const String& qrText, const String& labelText) {
+void QRCodeLabel::show(const String& qrText, const String& labelText) {
 		if (qrText == currentQRText && labelText == currentLabelText) {
 				return; // 如果內容無變化則不執行
 		}
