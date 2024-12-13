@@ -157,6 +157,6 @@ void Communication::initializeBLE() {
 
     Serial.println("[INFO] BLE initialized and advertising started");
 
-    // QRCodeLabel::show("https://timcsy.github.io/ServoSwitch/", "Device: Servo Switch");
+    QRCodeLabel::show("https://timcsy.github.io/ServoSwitch/", "Device: Servo Switch");
 }
 #endif

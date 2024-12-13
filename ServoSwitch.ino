@@ -14,7 +14,9 @@ void setup() {
     digitalWrite(D5, HIGH);  // VCC = D5
 #elif defined(ESP32)
     // OLED 螢幕設定
-    // QRCodeLabel::initialize(0x3c, 21, 22); // SDA = 21, SCL = 22
+    QRCodeLabel::initialize(0x3c, 21, 22); // SDA = 21, SCL = 22
+    pinMode(19, OUTPUT);
+    digitalWrite(19, HIGH);  // VCC = 19
 #endif
 
     // 初始化伺服器控制

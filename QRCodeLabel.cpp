@@ -1,5 +1,3 @@
-#ifdef ESP8266
-
 #include "QRCodeLabel.h"
 #include <qrcodeoled.h>
 #include <SSD1306.h>
@@ -54,5 +52,3 @@ void QRCodeLabel::show(const String& qrText, const String& labelText) {
 		// 更新顯示
 		display->display();
 }
-
-#endif
