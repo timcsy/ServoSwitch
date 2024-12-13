@@ -193,7 +193,7 @@
             await this.responseCharacteristic.startNotifications();
 
             alert("Bluetooth connected successfully!");
-            this.loadAlarms();
+            await this.loadAlarms();
           } catch (error) {
             console.error("Bluetooth connection failed:", error);
             alert("Failed to connect Bluetooth.");
@@ -226,11 +226,11 @@
         },
         async deleteAlarm(index) {
           const command = `DELETE_ALARM:${index}`;
-          await this.sendBluetoothCommand(command);
+          await this.sendCommand(command);
           this.loadAlarms();
         },
         async clearAlarms() {
-          await this.sendBluetoothCommand('CLEAR_ALARMS');
+          await this.sendCommand('CLEAR_ALARMS');
           this.loadAlarms();
         },
         async sendCommand(command) {

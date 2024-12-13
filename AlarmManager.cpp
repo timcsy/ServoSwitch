@@ -32,6 +32,7 @@ String AlarmManager::getAlarmsJSON() {
 
     String json;
     serializeJson(doc, json);
+    if (doc.isNull()) json = "[]";
     Serial.println("[INFO] Convert alarms to JSON");
     return json;
 }
