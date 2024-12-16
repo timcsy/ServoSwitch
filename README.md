@@ -1,5 +1,8 @@
 # Servo Switch 無線懶人開關
 
+![](demo.gif)
+![](ServoSwitchWebsite.png)
+
 ## 特色
 - 操作彈性客製化：可通過寫程式（附預設專案程式碼）、API 遙控
 - 支援 WiFi（ESP8266 系列開發版）或藍芽（ESP32 系列開發版）
